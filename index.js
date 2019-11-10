@@ -1,92 +1,82 @@
+//Links 
 const fs = require("fs");
 const axios = require("axios");
 const inquirer = require("inquirer");
+const util = require("util");
+const generateHTML = require("./generateHTML");
+const writeFileAsync = util.promisify(fs.writeFile);
 
 
-// #install.packages("jsonlite")
-// library(jsonlite)
-// #install.packages("httpuv")
-// library(httpuv)
-// #install.packages("httr")
-// library(httr)
+// Let HTML = "";
+let img = "";
+let location = "";
+let gitProfile = "";
+let userBlog = "";
+let userBio = "";
+let repoNum = 0;
+let followers = 0;
+let following = 0;
+let stars = 0;
+let color = "";
 
-oauth_endpoints("github")
+// Terminal comand line prompts
 
-myapp <- oauth_app(appname = "pdf_generator",
-                   key = "ea36a7216dc0c1d3f4b9",
-                   secret = "7f41ecf3e74589301fb4de74a1763d1f376218fe")
+function init() {
+    inquirer
+        .prompt([{
+                type: "input",
+                message: "Enter your GitHub username",
+                name: "username"
+            },
+            {
+                type: "input",
+                message: "Do you prefer green/red/pink/blue?",
+                name: "color"
+            }
+        ])
 
-github_token <- oauth2.0_token(oauth_endpoints("github"), myapp)
+// Axios call to github
+        .then(function ({
+            username,
+            color
+        }) {
+            const config = {
+                headers: {
+                    accept: "application/json"
+                }
+            };
+            let queryUrl = ` https://api.github.com/users/${username}`;
+            return axios.get(queryUrl, config).then(userData => {
+                let newUrl = `https://api.github.com/users/${username}/starred`;
 
-gtoken <- config(token = github_token)
-req <- GET("https://api.github.com/users/{username}/repos", gtoken)
 
-// stop_for_status(req)
+// Pull data from github server
+                axios.get(newUrl, config).then(starredRepos => {
+                    data = {
+                        img: userData.data.avatar_url,
+                        location: userData.data.location,
+                        gitProfile: userData.data.html_url,
+                        userBlog: userData.data.blog,
+                        userBio: userData.data.bio,
+                        repoNum: userData.data.public_repos,
+                        followers: userData.data.followers,
+                        following: userData.data.following,
+                        stars: starredRepos.data.length,
+                        username: username,
+                        color: color
+                    };
+                    
+                    generateHTML(data);
+                    writeHTML(generateHTML(data));
 
-// json1 = content(req)
-
-// gitDF = jsonlite::fromJSON(jsonlite::toJSON(json1))
-
-// gitDF[gitDF$full_name == "jtleek/datasharing", "created_at"]
-
-
-
-
-inquirer
-    .prompt({
-        message: "Enter your GitHub username:",
-        name: "username"
-    })
-    .then(function ({
-        username
-    }) {
-        const queryUrl = `https://api.github.com/users/${username}/`;
-
-        axios.get(queryUrl).then(function (res) {
-           
-         //# of Public Repos
-            const repoNames = res.data.map(function (repo) {
-                return repo.name;
+                });
             });
-
-            const repoNamesStr = repoNames.join("\n");
-
-        // User Avatar 
-            const avatar = res.data.map(function (repo) {
-                return repo.owner.avatar_url;
-            })
-
-        // User Bio
-            const userBio = res.data.map(function(repo) {
-                return repo.bio;
-            })
-
-
-
-        //# of Follwers
-            const followersCount = res.data.map(function(repo) {
-                return repo.followers;
-            })
-
-            const followersCountStr = followersCount.join("\n");
-
-
-        //# of Github Stars
-            const watchersCount = res.data.map(function (repo) {
-                return repo.watchers;
-            });
-
-            const watchersCountStr = watchersCount.join("\n");
-
-        //# of users following
-
-            //   fs.writeFile("repos.txt", repoNamesStr, function(err) {
-            //     if (err) {
-            //       throw err;
-            //     }
-            console.log(` ${userBio}`)
-            console.log(` ${followersCount.length} Followers`);
-            console.log(` ${watchersCount.length} Stars`);
-            console.log(` ${repoNames.length} Public repos`);
         });
-    });
+}
+
+// Function to generate HTML
+const writeHTML = function(generateHTML) {
+    writeFileAsync("index.html", generateHTML);
+}
+
+init();
