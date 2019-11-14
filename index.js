@@ -77,6 +77,8 @@ function init() {
 // Function to generate HTML
 const writeHTML = function(generateHTML) {
     writeFileAsync("index.html", generateHTML);
+    console.log(generateHTML);
 }
+
 
 init();
